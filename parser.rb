@@ -52,7 +52,7 @@ upload_flag = false
 
 mail.attachments.each do |attachment|
   if (attachment.content_type.start_with?('image/jpeg'))
-    test = Tempfile.new(["photo", ".jpg"], File.join(File.expand_path(File.dirname(__FILE__)), "file", "eml", "jpeg"))
+    test = Tempfile.new(["photo", ".jpg"], File.join(File.expand_path(File.dirname(__FILE__)), "file", "jpeg"))
     test.close
     begin
       File.open(test.path, "w+b", 0644) { |f| f.write attachment.body.decoded }
