@@ -1,0 +1,9 @@
+.DS_store*
+*~
+api_settings.rb
+vendor/
+file/eml/*
+file/jpeg/*
+.bundle
+.rbenv*
+Gemfile.lock

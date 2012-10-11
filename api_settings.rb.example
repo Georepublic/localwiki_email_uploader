@@ -1,0 +1,9 @@
+# -*- coding: utf-8 -*-
+
+def get_setting
+  return {
+    :base_url => '<server url>',
+    :user_name => '<user name>',
+    :api_key => '<api key> '
+  }
+end
