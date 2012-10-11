@@ -4,7 +4,7 @@ require 'mail'
 require 'exifr'
 require 'tempfile'
 require 'nkf'
-require 'rmagick'
+require 'RMagick'
 load 'localwiki_client.rb'
 load 'api_settings.rb'
 
@@ -31,7 +31,7 @@ EOS
   
 end
 
-temp_mail = Tempfile.new(["mail", "eml"], "./file/eml")
+temp_mail = Tempfile.new(["mail", "eml"], File.join(File.expand_path(File.dirname(__FILE__)), "file", "eml"))
 temp_mail.close
 f = File.open(temp_mail, "w", 0644)
 while line = STDIN.gets
@@ -52,7 +52,7 @@ upload_flag = false
 
 mail.attachments.each do |attachment|
   if (attachment.content_type.start_with?('image/jpeg'))
-    test = Tempfile.new(["photo", ".jpg"], "./file/jpeg/")
+    test = Tempfile.new(["photo", ".jpg"], File.join(File.expand_path(File.dirname(__FILE__)), "file", "eml", "jpeg"))
     test.close
     begin
       File.open(test.path, "w+b", 0644) { |f| f.write attachment.body.decoded }
@@ -122,7 +122,10 @@ if page_hash.nil?
     "content" => body,
     "name" => title
   }
-  page.create(page_obj)
+  unless page.create(page_obj)
+    puts "can't create page"
+    exit
+  end
   page_hash = page.exist?(title)
   page_api_location = page_hash["resource_uri"]
   
