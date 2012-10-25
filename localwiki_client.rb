@@ -63,7 +63,6 @@ class LocalWikiClientBase
     end
     return false
   end
-    
 
   def delete(page_or_id)
     raise RuntimeError, "must set user_name and api_key" unless can_post?
@@ -78,7 +77,45 @@ class LocalWikiClientBase
     return false
   end
 
+  def search_with_auth(objs)
+    raise RuntimeError, "must set user_name and api_key" unless can_post?
+    begin
+      response = RestClient.get @base_url + api_path + make_query(objs), headers
+      if response.code == 200
+        return JSON.parse(response.to_str)
+      end
+    rescue => e
+      puts "Can't search because #{e.message}"
+    end
+    return nil
+  end
+
+  def get(path)
+    begin
+      response = RestClient.get @base_url + path, headers
+      if response.code == 200
+        return JSON.parse(response.to_str)
+      end
+    rescue => e
+      puts "Can't get because #{e.message}"
+    end
+    return nil
+  end
+
   private
+
+  def make_query(objs)
+    queries = Array.new
+    objs.each do |obj|
+      queries << "#{obj[0]}__#{obj[1]}=" + CGI.escape(obj[2])
+    end
+    query = queries.join("&")
+    if query
+      return "?" + query
+    end
+    return ""
+  end
+
   def can_post?
     return false if @user_name.blank? or @api_key.blank?
     return true
@@ -119,6 +156,24 @@ class LocalWikiMap < LocalWikiClientBase
   
   def api_path
     "/api/map/"
+  end
+
+end
+
+# for custom api
+class LocalWikiUsersWithKey < LocalWikiClientBase
+  
+  def api_path
+    "/api/users_with_apikey/"
+  end
+
+end
+
+# for custom api
+class LocalWikiApiKey < LocalWikiClientBase
+  
+  def api_path
+    "/api/api_key/"
   end
 
 end
