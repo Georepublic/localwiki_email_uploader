@@ -47,6 +47,9 @@ f.close
 
 mail = Mail.read(temp_mail)
 
+title = mail.subject
+exit if title.blank?
+
 args_for_apikey = get_setting
 
 emailaddress = mail.from[0].to_s
@@ -84,7 +87,6 @@ args = {
   :api_key => api_key
 }
 
-title = nil
 body = nil
 filepath = nil
 latitude = nil
@@ -114,7 +116,6 @@ end
 
 #exit unless upload_flag
 
-title = mail.subject
 
 unless mail.parts.blank?
   mail.parts.each do |part|
