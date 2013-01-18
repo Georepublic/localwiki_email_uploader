@@ -79,7 +79,7 @@ def upload_image_and_edit_page(args, page_hash, filepath, width, height, body)
 EOS
   end
   if body
-    content += body
+    content += ("<hr />" + body)
   end
   page_obj = page_hash
   page_obj["content"] = content
