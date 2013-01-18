@@ -6,6 +6,58 @@ require 'nkf'
 require 'RMagick'
 load 'localwiki_client.rb'
 load 'api_settings.rb'
+require 'CGI'
+
+def unescape_list(tags)
+  ret = Array.new
+  tags.each do |tag|
+    ret << CGI.unescape(tag)
+  end
+  return ret
+end
+
+def fetch_or_create_tag(args, slug)
+  tag = LocalWikiTag.new args
+  tag_hash = tag.exist?(slug)
+  if tag_hash.nil?
+    tag_obj = {
+      "name" => slug
+    }
+    unless tag.create(tag_obj)
+      puts "can't create tag"
+      return nil
+    end
+    tag_hash = tag.exist?(slug)
+  end
+  return tag_hash["resource_uri"]
+end
+
+def new_or_add_tag(args, page_name, page_uri, tag_uri, tag_name)
+  page_tags = LocalWikiPageTags.new args
+  page_tags_hash = page_tags.exist?(page_name)
+  new_tag_uri = "/api/tag/" + tag_name
+  if page_tags_hash.nil?
+    page_tags_obj = {
+      "page" => page_uri,
+      "tags" => [new_tag_uri]
+    }
+    puts page_tags_obj
+    unless page_tags.create(page_tags_obj)
+      puts "can't create page_tag"
+      return nil
+    end
+  else
+    unless page_tags_hash["tags"].include?(tag_uri)
+      page_tags_hash["tags"] = unescape_list(page_tags_hash["tags"])
+      page_tags_hash["tags"] << new_tag_uri
+      unless page_tags.update(page_name, page_tags_hash)
+        puts "can't update page_tag"
+        return nil
+      end
+    end
+  end
+  return true
+end  
 
 def upload_image_and_edit_page(args, page_hash, filepath, width, height, body)
 
@@ -29,9 +81,8 @@ EOS
   if body
     content += body
   end
-  page_obj = {
-    "content" => content
-  }
+  page_obj = page_hash
+  page_obj["content"] = content
   title = page_hash["name"]
   page.update(title, page_obj)
   
@@ -163,6 +214,14 @@ if filepath
   end
 end
 
+tag_slug = get_setting[:tag_slug]
+tag_uri = fetch_or_create_tag(args, tag_slug)
+
+if tag_uri.nil?
+  puts "can't create tag"
+  exit
+end
+
 #1. page.exist? -> false:2 true:3
 page = LocalWikiPage.new args
 
@@ -176,6 +235,7 @@ if page_hash.nil?
     "content" => body,
     "name" => title
   }
+  puts page_obj
   unless page.create(page_obj)
     puts "can't create page"
     exit
@@ -207,11 +267,12 @@ if page_hash.nil?
   if upload_flag
     upload_image_and_edit_page(args, page_hash, filepath, width, height, nil)
   end
-
+  new_or_add_tag(args, page_hash["name"], page_hash["resource_uri"], tag_uri, tag_slug)
 else
-
+  
   #3.1 upload image
   #3.2 edit page
   upload_image_and_edit_page(args, page_hash, filepath, width, height, body)
+  new_or_add_tag(args, page_hash["name"], page_hash["resource_uri"], tag_uri, tag_slug)
 end
 

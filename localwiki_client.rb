@@ -40,6 +40,7 @@ class LocalWikiClientBase
 
   def create(obj)
     raise RuntimeError, "must set user_name and api_key" unless can_post?
+    puts JSON.dump(obj)
     begin
       response = RestClient.post @base_url + api_path, JSON.dump(obj), headers
       if response.code == 201
@@ -53,6 +54,7 @@ class LocalWikiClientBase
 
   def update(page_or_id, obj)
     raise RuntimeError, "must set user_name and api_key" unless can_post?
+    puts JSON.dump(obj)
     begin
       response = RestClient.put @base_url + api_path + CGI.escape(page_or_id), JSON.dump(obj), headers
       if response.code == 204
@@ -174,6 +176,22 @@ class LocalWikiApiKey < LocalWikiClientBase
   
   def api_path
     "/api/api_key/"
+  end
+
+end
+
+class LocalWikiTag < LocalWikiClientBase
+  
+  def api_path
+    "/api/tag/"
+  end
+
+end
+
+class LocalWikiPageTags < LocalWikiClientBase
+  
+  def api_path
+    "/api/page_tags/"
   end
 
 end
