@@ -6,7 +6,7 @@ require 'nkf'
 require 'RMagick'
 load 'localwiki_client.rb'
 load 'api_settings.rb'
-require 'CGI'
+require 'cgi'
 
 def unescape_list(tags)
   ret = Array.new
@@ -224,7 +224,7 @@ end
 
 #1. page.exist? -> false:2 true:3
 page = LocalWikiPage.new args
-
+body = body.gsub(/(\r\n|[\r\n])/, "</p><p>\n")
 body = "<p>" + body + "</p>"
 
 page_hash = page.exist?(title)
