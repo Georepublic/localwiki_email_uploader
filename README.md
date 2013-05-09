@@ -11,11 +11,11 @@ If Localwiki's page exist, upload jpeg file, and modify page(don't modify map).
 
 ## About Custom API
 
-Custom API is available at [Our branch].
+Custom API is available at [Our master_ja branch].
 This API allow access to get API key.
 Please check [commit for api].
 
-[Our branch]: https://github.com/Georepublic/localwiki/tree/oshima-platform "Oshima platform branch"
+[Our branch]: https://github.com/Georepublic/localwiki "Georepublic's master_ja branch"
 [commit for api]: https://github.com/Georepublic/localwiki/commit/29cf7ad5e0d846f617e12c46a0ac5fe35652b459 "add custom API for customer"
 
 ## Setup
@@ -36,7 +36,24 @@ And setup your .forward file. For example, if you use rbenv:
     | <your path>/localwiki_email_uploader/app.sh
 
 Please check rbenv-entrypoint.sh, this file has many hints.
-    
+
+If you setup in Ubuntu, see also: [Setup Email Uploader in Ubuntu]
+
+[Setup Email Uploader in Ubuntu]: https://github.com/Georepublic/localwiki_email_uploader/blob/master/Setup_Ubuntu.md "Setup Email Uploader in Ubuntu"
+
+## app_settings.rb
+
+ex: Localwiki's instance run "http://example.com" and create user "mail" and generate api_key "xxx" and add tag "frommail".
+
+    def get_setting
+      return {
+        :base_url => 'http://example.com',
+        :user_name => 'mailuser',
+        :api_key => 'xxx',
+        :tag_slug => 'frommail'
+      }
+    end
+
 ## Test
 
 Save email and follow:
