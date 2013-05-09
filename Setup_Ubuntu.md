@@ -1,13 +1,13 @@
 Setup Email Uploader in Ubuntu
 ==============================
 
-ex: Your domain is 'example.com', please replace this domain.
+ex: Your domain is 'example.com' and email post to 'publish-localwiki@example.com'. Please replace this domain and user name.
 
-# add user
+# Add user
 
     $ sudo adduser publish-localwiki
 
-# postfix setting
+# Setup postfix
 
     $ sudo apt-get install postfix
     $ vim /etc/postfix/main.cf
@@ -21,20 +21,19 @@ ex: Your domain is 'example.com', please replace this domain.
     $ sudo postmap /etc/postfix/access
     $ sudo /etc/init.d/postfix restart
 
-# install depend package
+# Install depend package
 
 RMagick require ImageMagick Development package.
 
     $ sudo apt-get install libmagickcore-dev
     $ sudo apt-get install libmagickwand-dev
 
-# setup publish-localwiki user
+# Setup ruby environment to publish-localwiki user
 
 Install rbenv and ruby 1.9.3-p327 to publish-localwiki user.
 
     $ sudo su - publish-localwiki
     $ git clone git://github.com/sstephenson/rbenv.git ~/.rbenv
-    $ echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bash_profile
     $ echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.profile
     $ echo 'eval "$(rbenv init -)"' >> ~/.profile
     $ exec $SHELL -l
