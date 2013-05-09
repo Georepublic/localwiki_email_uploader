@@ -11,7 +11,7 @@ If Localwiki's page exist, upload jpeg file, and modify page(don't modify map).
 
 ## About Custom API
 
-Custom API is available at [Our master_ja branch].
+Custom API is available at [Our branch].
 This API allow access to get API key.
 Please check [commit for api].
 
