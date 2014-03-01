@@ -125,7 +125,7 @@ class LocalWikiClientBase
 
   def authorization_header
     return nil unless can_post?
-    return "ApiKey #{@user_name}:#{@api_key}"
+    return "Token #{@api_key}"
   end
 
 end
@@ -133,7 +133,7 @@ end
 class LocalWikiPage < LocalWikiClientBase
 
   def api_path
-    "/api/page/"
+    "/pages/"
   end
 
 end
@@ -141,7 +141,7 @@ end
 class LocalWikiFile < LocalWikiClientBase
 
   def api_path
-    "/api/file/"
+    "/files/"
   end
   
   def upload(file_path, file_name, slug)
@@ -157,7 +157,7 @@ end
 class LocalWikiMap < LocalWikiClientBase
   
   def api_path
-    "/api/map/"
+    "/maps/"
   end
 
 end
@@ -166,7 +166,7 @@ end
 class LocalWikiUsersWithKey < LocalWikiClientBase
   
   def api_path
-    "/api/users_with_apikey/"
+    "/users_with_apikey/"
   end
 
 end
@@ -175,7 +175,7 @@ end
 class LocalWikiApiKey < LocalWikiClientBase
   
   def api_path
-    "/api/api_key/"
+    "/api_keys/"
   end
 
 end
@@ -183,7 +183,7 @@ end
 class LocalWikiTag < LocalWikiClientBase
   
   def api_path
-    "/api/tag/"
+    "/tags/"
   end
 
 end
@@ -191,7 +191,7 @@ end
 class LocalWikiPageTags < LocalWikiClientBase
   
   def api_path
-    "/api/page_tags/"
+    "/page_tags/"
   end
 
 end
