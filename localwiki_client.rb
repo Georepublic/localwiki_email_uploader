@@ -2,12 +2,12 @@
 require 'rest_client'
 require 'json'
 require 'cgi'
+require 'uri'
 
 class LocalWikiClientBase
   
   def initialize args
     @base_url = args[:base_url] or raise ArgumentError, "must need :base_url"
-    @user_name = args[:user_name]
     @api_key = args[:api_key]
   end
   
@@ -28,9 +28,13 @@ class LocalWikiClientBase
 
   def exist?(page_or_id)
     begin
-      response = RestClient.get @base_url + api_path + CGI.escape(page_or_id), headers
+      response = RestClient.get @base_url + api_path + '?slug__icontains=' + URI.escape(page_or_id), headers
       if response.code == 200
-        return JSON.parse(response.to_str)
+        data = JSON.parse(response.to_str)
+        if data["count"] == 0
+            return nil
+        end
+        return data["results"][0]
       end
     rescue => e
       puts e
@@ -39,7 +43,7 @@ class LocalWikiClientBase
   end
 
   def create(obj)
-    raise RuntimeError, "must set user_name and api_key" unless can_post?
+    raise RuntimeError, "must set api_key" unless can_post?
     puts JSON.dump(obj)
     begin
       response = RestClient.post @base_url + api_path, JSON.dump(obj), headers
@@ -52,11 +56,25 @@ class LocalWikiClientBase
     return false
   end
 
-  def update(page_or_id, obj)
-    raise RuntimeError, "must set user_name and api_key" unless can_post?
+  def update(page_url, obj)
+    raise RuntimeError, "must set api_key" unless can_post?
     puts JSON.dump(obj)
     begin
-      response = RestClient.put @base_url + api_path + CGI.escape(page_or_id), JSON.dump(obj), headers
+      response = RestClient.put page_url, JSON.dump(obj), headers
+      if response.code == 204
+        return true
+      end
+    rescue => e
+      puts "Unable update because #{e.message}"
+    end
+    return false
+  end
+
+  def patch(page_url, obj)
+    raise RuntimeError, "must set api_key" unless can_post?
+    puts JSON.dump(obj)
+    begin
+      response = RestClient.patch page_url, JSON.dump(obj), headers
       if response.code == 204
         return true
       end
@@ -119,13 +137,13 @@ class LocalWikiClientBase
   end
 
   def can_post?
-    return false if @user_name.blank? or @api_key.blank?
+    return false if @api_key.blank?
     return true
   end
 
   def authorization_header
     return nil unless can_post?
-    return "ApiKey #{@user_name}:#{@api_key}"
+    return "Token #{@api_key}"
   end
 
 end
@@ -133,7 +151,7 @@ end
 class LocalWikiPage < LocalWikiClientBase
 
   def api_path
-    "/api/page/"
+    "/pages/"
   end
 
 end
@@ -141,13 +159,13 @@ end
 class LocalWikiFile < LocalWikiClientBase
 
   def api_path
-    "/api/file/"
+    "/files/"
   end
   
-  def upload(file_path, file_name, slug)
+  def upload(file_path, file_name, slug, region)
     
     begin
-      response = RestClient.post @base_url + api_path, {:file => File.new(file_path, 'rb'), :name => file_name, :slug => slug}, headers
+      response = RestClient.post @base_url + api_path, {:file => File.new(file_path, 'rb'), :name => file_name, :slug => slug, :region => region}, headers
     rescue => e
       puts e
     end
@@ -157,41 +175,7 @@ end
 class LocalWikiMap < LocalWikiClientBase
   
   def api_path
-    "/api/map/"
-  end
-
-end
-
-# for custom api
-class LocalWikiUsersWithKey < LocalWikiClientBase
-  
-  def api_path
-    "/api/users_with_apikey/"
-  end
-
-end
-
-# for custom api
-class LocalWikiApiKey < LocalWikiClientBase
-  
-  def api_path
-    "/api/api_key/"
-  end
-
-end
-
-class LocalWikiTag < LocalWikiClientBase
-  
-  def api_path
-    "/api/tag/"
-  end
-
-end
-
-class LocalWikiPageTags < LocalWikiClientBase
-  
-  def api_path
-    "/api/page_tags/"
+    "/maps/"
   end
 
 end
