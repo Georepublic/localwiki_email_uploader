@@ -7,6 +7,7 @@ require 'RMagick'
 load 'localwiki_client.rb'
 load 'api_settings.rb'
 require 'cgi'
+require 'unicode_utils'
 
 def unescape_list(tags)
   ret = Array.new
@@ -16,20 +17,12 @@ def unescape_list(tags)
   return ret
 end
 
-def fetch_or_create_tag(args, slug)
-  tag = LocalWikiTag.new args
-  tag_hash = tag.exist?(slug)
-  if tag_hash.nil?
-    tag_obj = {
-      "name" => slug
-    }
-    unless tag.create(tag_obj)
-      puts "can't create tag"
-      return nil
-    end
-    tag_hash = tag.exist?(slug)
-  end
-  return tag_hash["resource_uri"]
+# Convert title to LocalWiki slug format.
+def slugify(title)
+    slug = UnicodeUtils.nfkd(title)
+    slug.gsub(/(\w|\s|-|.|,|'|"|\/|!|@|$|%|&|\*|\(|\))/, "")
+    slug = slug.downcase
+    return slug
 end
 
 def new_or_add_tag(args, page_name, page_uri, tag_uri, tag_name)
@@ -59,6 +52,38 @@ def new_or_add_tag(args, page_name, page_uri, tag_uri, tag_name)
   return true
 end  
 
+def upload_image(args, page_slug, filepath)
+
+  return if filepath.nil?
+  file = LocalWikiFile.new args
+  filename = File::basename(filepath)
+  file.upload(filepath, filename, page_slug, get_setting[:region])
+
+  return filename
+  
+end
+
+def append_image(content, filename, width, height)
+  had_content_already = !(content.nil?)
+  content << <<EOS
+<p>
+<span class="image_frame image_frame_border">
+<img src="_files/#{filename}" style="width: #{width}px; height: #{height}px;" />
+</span></p>
+EOS
+  return content
+
+end
+
+def add_tag(page, page_hash, tag_slug)
+    return if tag_slug.nil?
+    obj = {
+        "tags" => page_hash["tags"]
+    }
+    obj["tags"] << tag_slug
+    page.patch(page_hash["url"], obj)
+end
+
 def upload_image_and_edit_page(args, page_hash, filepath, width, height, body)
 
   return if body.nil? and filepath.nil?
@@ -66,7 +91,7 @@ def upload_image_and_edit_page(args, page_hash, filepath, width, height, body)
     page_slug = page_hash["slug"]
     file = LocalWikiFile.new args
     filename = File::basename(filepath)
-    file.upload(filepath, filename, page_slug)
+    file.upload(filepath, filename, page_slug, get_setting[:region])
   end
   page = LocalWikiPage.new args
   content = page_hash["content"]
@@ -84,7 +109,7 @@ EOS
   page_obj = page_hash
   page_obj["content"] = content
   title = page_hash["name"]
-  page.update(title, page_obj)
+  page.update(page_hash["url"], page_obj)
   
 end
 
@@ -112,30 +137,10 @@ search_users_obj << emailaddress
 search_users_objs = Array.new
 search_users_objs << search_users_obj
 
-users_with_key = LocalWikiUsersWithKey.new args_for_apikey
-search_result = users_with_key.search_with_auth(search_users_objs)
-if search_result.nil? or search_result["objects"].blank?
-  puts "can't find user"
-  exit
-end
-user_obj = search_result["objects"][0]
-username = user_obj["username"]
-api_key_path = user_obj["api_key"]
-if api_key_path.blank?
-  puts "not exist api key"
-  exit
-end
-api_key_client = LocalWikiApiKey.new args_for_apikey
-search_result_api_key = api_key_client.get(api_key_path)
-if search_result_api_key.nil?
-  puts "can't get api key"
-  exit
-end
-api_key = search_result_api_key["key"]
 args = {
-  :base_url => args_for_apikey[:base_url],
-  :user_name => username,
-  :api_key => api_key
+  :base_url => get_setting[:base_url],
+  :api_key => get_setting[:api_key],
+  :region => get_setting[:region]
 }
 
 body = nil
@@ -146,7 +151,8 @@ upload_flag = false
 has_location = false
 
 mail.attachments.each do |attachment|
-  if (attachment.content_type.start_with?('image/jpeg'))
+  content_type = attachment.content_type.downcase
+  if (content_type.start_with?('image/jpeg') or content_type.start_with?('image/jpg'))
     test = File.join(File.expand_path(File.dirname(__FILE__)), "file", "jpeg", timestamp + ".jpg")
     begin
       File.open(test, "w+b", 0644) { |f| f.write attachment.body.decoded }
@@ -215,14 +221,14 @@ if filepath
 end
 
 tag_slug = get_setting[:tag_slug]
-tag_uri = fetch_or_create_tag(args, tag_slug)
+page_slug = slugify(title)
 
-if tag_uri.nil?
-  puts "can't create tag"
-  exit
+#1. upload the image, if present.
+if upload_flag
+  filename = upload_image(args, page_slug, filepath)
 end
 
-#1. page.exist? -> false:2 true:3
+#2. page.exist? -> false:3 true:4
 page = LocalWikiPage.new args
 body = body.gsub(/(\r\n|[\r\n])/, "</p><p>\n")
 body = "<p>" + body + "</p>"
@@ -230,10 +236,12 @@ body = "<p>" + body + "</p>"
 page_hash = page.exist?(title)
 
 if page_hash.nil?
-  #2.1 page.create
+  #3.1 page.create, with appended image
+  content = append_image(body, filename, width, height)
   page_obj = {
-    "content" => body,
-    "name" => title
+    "content" => content,
+    "name" => title,
+    "region" => get_setting[:region]
   }
   puts page_obj
   unless page.create(page_obj)
@@ -241,11 +249,9 @@ if page_hash.nil?
     exit
   end
   page_hash = page.exist?(title)
-  page_api_location = page_hash["resource_uri"]
+  page_api_location = page_hash["url"]
   
-  #2.2 upload image -> upload_image_and_edit_page
-
-  #2.3 create map
+  #3.3 create map
   if has_location
     map_obj = {
       "geom" => {
@@ -257,22 +263,26 @@ if page_hash.nil?
                         ],
         "type" => "GeometryCollection"
       },
-      "page" => page_api_location
+      "page" => page_api_location,
+      "region" => get_setting[:region]
     }
     map = LocalWikiMap.new args
     map.create(map_obj)
   end
 
-  #2.4 edit page
-  if upload_flag
-    upload_image_and_edit_page(args, page_hash, filepath, width, height, nil)
-  end
-  new_or_add_tag(args, page_hash["name"], page_hash["resource_uri"], tag_uri, tag_slug)
 else
-  
-  #3.1 upload image
-  #3.2 edit page
-  upload_image_and_edit_page(args, page_hash, filepath, width, height, body)
-  new_or_add_tag(args, page_hash["name"], page_hash["resource_uri"], tag_uri, tag_slug)
+  #4.1 update the existing page content with the appended image and appended body
+  page_obj = {
+    "content" => append_image(page_hash["content"], filename, width, height),
+    "name" => title,
+    "region" => get_setting[:region]
+  }
+  if body
+    page_obj["content"] += ('<hr/>' + body)
+  end
+  page.update(page_hash["url"], page_obj)
+
 end
 
+#5 Add tag, if present
+add_tag(page, page_hash, tag_slug)

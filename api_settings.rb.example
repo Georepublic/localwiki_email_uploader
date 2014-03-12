@@ -2,8 +2,10 @@
 
 def get_setting
   return {
-    :base_url => '<server url>',
+    :base_url => 'http://localwiki.net/api/v4',
     :user_name => '<user name>',
+    # Pick a region URL here
+    :region => 'http://localwiki.net/api/v4/regions/2/',
     :api_key => '<api key>',
     :tag_slug => '<tag name>'
   }
